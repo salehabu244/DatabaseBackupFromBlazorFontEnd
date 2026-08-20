@@ -1,0 +1,43 @@
+@* Navigation menu rendered inside MainLayout. *@
+
+<div class="nav-menu-header px-3 py-3 text-uppercase small text-white-50">Menu</div>
+<ul class="nav flex-column">
+    <li class="nav-item">
+        <NavLink class="nav-link" href="" Match="NavLinkMatch.All" @onclick="OnNavigate">
+            <i class="bi bi-speedometer2 me-2"></i> Dashboard
+        </NavLink>
+    </li>
+    <li class="nav-item">
+        <NavLink class="nav-link" href="backup" @onclick="OnNavigate">
+            <i class="bi bi-cloud-arrow-down me-2"></i> Backup
+        </NavLink>
+    </li>
+    <li class="nav-item">
+        <NavLink class="nav-link" href="restore" @onclick="OnNavigate">
+            <i class="bi bi-cloud-arrow-up me-2"></i> Restore
+        </NavLink>
+    </li>
+    <li class="nav-item">
+        <NavLink class="nav-link" href="history" @onclick="OnNavigate">
+            <i class="bi bi-clock-history me-2"></i> History
+        </NavLink>
+    </li>
+    <li class="nav-item">
+        <NavLink class="nav-link" href="settings" @onclick="OnNavigate">
+            <i class="bi bi-gear me-2"></i> Settings
+        </NavLink>
+    </li>
+</ul>
+
+@code {
+    [Parameter]
+    public EventCallback OnNavigate { get; set; }
+
+    private async Task HandleClick()
+    {
+        if (OnNavigate.HasDelegate)
+        {
+            await OnNavigate.InvokeAsync();
+        }
+    }
+}

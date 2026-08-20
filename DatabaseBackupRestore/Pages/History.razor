@@ -1,0 +1,108 @@
+@page "/history"
+@rendermode InteractiveServer
+@inject BackupHistoryStore HistoryStore
+@implements IDisposable
+
+<PageTitle>History</PageTitle>
+
+<div class="d-flex flex-wrap justify-content-between align-items-center mb-4">
+    <h1 class="h3 mb-0">
+        <i class="bi bi-clock-history me-2 text-primary"></i>Backup &amp; Restore History
+    </h1>
+    <button class="btn btn-outline-danger" @onclick="ClearAsync" disabled="@(!_entries.Any())">
+        <i class="bi bi-trash me-1"></i> Clear
+    </button>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <i class="bi bi-list-ul me-2"></i>Operations
+    </div>
+    <div class="card-body p-0">
+        @if (!_entries.Any())
+        {
+            <div class="text-center text-muted py-5">
+                <i class="bi bi-inbox display-6 d-block mb-2"></i>
+                No operations recorded yet.
+            </div>
+        }
+        else
+        {
+            <div class="table-responsive">
+                <table class="table table-striped table-hover mb-0 align-middle">
+                    <thead>
+                        <tr>
+                            <th style="width: 60px;">#</th>
+                            <th>Database</th>
+                            <th>Backup File</th>
+                            <th>Type</th>
+                            <th>Date (local)</th>
+                            <th>Status</th>
+                            <th>Detail</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var entry in _entries)
+                        {
+                            <tr>
+                                <td class="text-muted">@entry.Id</td>
+                                <td class="fw-semibold">@entry.DatabaseName</td>
+                                <td><code class="text-break">@entry.BackupFile</code></td>
+                                <td>
+                                    @if (entry.IsRestore)
+                                    {
+                                        <span class="badge bg-warning text-dark">Restore</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-info text-dark">Backup</span>
+                                    }
+                                </td>
+                                <td>@entry.Date.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss")</td>
+                                <td>
+                                    @if (entry.Status == BackupStatus.Success)
+                                    {
+                                        <span class="badge bg-success">Success</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-danger">Failed</span>
+                                    }
+                                </td>
+                                <td class="text-muted small">@entry.Detail</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </div>
+</div>
+
+@code {
+    private IReadOnlyList<BackupHistory> _entries = Array.Empty<BackupHistory>();
+
+
+    protected override void OnInitialized()
+    {
+        Refresh();
+        HistoryStore.OnEntryAdded += HandleEntryAdded;
+    }
+
+    private void HandleEntryAdded(BackupHistory _) => Refresh();
+
+    private void Refresh()
+    {
+        _entries = HistoryStore.GetAll();
+        InvokeAsync(StateHasChanged);
+    }
+
+    private void ClearAsync()
+    {
+        HistoryStore.Clear();
+        Refresh();
+    }
+
+
+    public void Dispose() => HistoryStore.OnEntryAdded -= HandleEntryAdded;
+}

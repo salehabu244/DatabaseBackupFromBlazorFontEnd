@@ -1,0 +1,41 @@
+@inherits LayoutComponentBase
+
+<div class="page">
+    <header class="top-bar shadow-sm">
+        <div class="container-fluid d-flex align-items-center">
+            <button class="btn btn-link text-white d-md-none me-2" @onclick="ToggleNav" aria-label="Toggle navigation">
+                <i class="bi bi-list fs-3"></i>
+            </button>
+            <a class="navbar-brand text-white fw-bold mb-0" href="">
+                <i class="bi bi-database-fill me-2"></i>Database Backup &amp; Restore
+            </a>
+        </div>
+    </header>
+
+    <div class="layout-body">
+        <nav class="side-nav @(navOpen ? "open" : null)" aria-label="Main navigation">
+            <NavMenu OnNavigate="CloseNav" />
+        </nav>
+
+        <main class="content-area">
+            <div class="container-fluid py-4">
+                @Body
+            </div>
+        </main>
+    </div>
+
+    <footer class="app-footer text-center text-muted py-3 small">
+        <div class="container-fluid">
+            &copy; @DateTime.Now.Year DatabaseBackupRestore &middot; Built with ASP.NET Core 10 Blazor
+        </div>
+    </footer>
+</div>
+
+<div class="nav-backdrop @(navOpen ? "show" : null)" @onclick="CloseNav"></div>
+
+@code {
+    private bool navOpen;
+
+    private void ToggleNav() => navOpen = !navOpen;
+    private void CloseNav() => navOpen = false;
+}

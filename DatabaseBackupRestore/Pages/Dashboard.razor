@@ -1,0 +1,154 @@
+@page "/"
+@rendermode InteractiveServer
+@inject DatabaseService DbService
+
+<PageTitle>Dashboard</PageTitle>
+
+<div class="d-flex flex-wrap justify-content-between align-items-center mb-4">
+    <h1 class="h3 mb-0">
+        <i class="bi bi-speedometer2 me-2 text-primary"></i>Dashboard
+    </h1>
+    <button class="btn btn-outline-primary" @onclick="RefreshAsync" disabled="@_isLoading">
+        <i class="bi bi-arrow-clockwise me-1"></i> Refresh
+    </button>
+</div>
+
+@if (_isLoading)
+{
+    <div class="text-center my-5">
+        <div class="spinner-border text-primary" role="status"></div>
+        <div class="text-muted mt-2">Connecting to SQL Server&hellip;</div>
+    </div>
+}
+else if (_connection is not null)
+{
+    <div class="row g-3 mb-4">
+        <div class="col-md-6 col-lg-3">
+            <div class="stat-tile bg-tile-primary">
+                <div>
+                    <div class="stat-label">SQL Server</div>
+                    <div class="stat-value">@_connection.ServerName</div>
+                </div>
+                <i class="bi bi-hdd-network stat-icon"></i>
+            </div>
+        </div>
+        <div class="col-md-6 col-lg-3">
+            <div class="stat-tile @(_connection.IsConnected ? "bg-tile-success" : "bg-tile-warning")">
+                <div>
+                    <div class="stat-label">Status</div>
+                    <div class="stat-value">
+                        @(_connection.IsConnected ? "Connected" : "Disconnected")
+                    </div>
+                </div>
+                <i class="bi @(_connection.IsConnected ? "bi-check-circle" : "bi-exclamation-triangle") stat-icon"></i>
+            </div>
+        </div>
+        <div class="col-md-6 col-lg-3">
+            <div class="stat-tile bg-tile-info">
+                <div>
+                    <div class="stat-label">User Databases</div>
+                    <div class="stat-value">@_connection.DatabaseCount</div>
+                </div>
+                <i class="bi bi-database stat-icon"></i>
+            </div>
+        </div>
+        <div class="col-md-6 col-lg-3">
+            <div class="stat-tile bg-tile-warning">
+                <div>
+                    <div class="stat-label">Total Size</div>
+                    <div class="stat-value">@_connection.TotalDatabaseSize</div>
+                </div>
+                <i class="bi bi-hdd stat-icon"></i>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-3">
+        <div class="col-lg-7">
+            <div class="card h-100">
+                <div class="card-header">
+                    <i class="bi bi-info-circle me-2"></i>Server Information
+                </div>
+                <div class="card-body">
+                    <dl class="row mb-0">
+                        <dt class="col-sm-4 text-muted">Server Name</dt>
+                        <dd class="col-sm-8">@_connection.ServerName</dd>
+
+                        <dt class="col-sm-4 text-muted">Status</dt>
+                        <dd class="col-sm-8">
+                            @if (_connection.IsConnected)
+                            {
+                                <span class="badge bg-success">Connected</span>
+                            }
+                            else
+                            {
+                                <span class="badge bg-danger">Disconnected</span>
+                            }
+                        </dd>
+
+                        <dt class="col-sm-4 text-muted">Version</dt>
+                        <dd class="col-sm-8 text-break">@_connection.ServerVersion</dd>
+
+                        <dt class="col-sm-4 text-muted">User Databases</dt>
+                        <dd class="col-sm-8">@_connection.DatabaseCount</dd>
+
+                        <dt class="col-sm-4 text-muted">Total Size</dt>
+                        <dd class="col-sm-8">@_connection.TotalDatabaseSize</dd>
+
+                        <dt class="col-sm-4 text-muted">Last Tested (UTC)</dt>
+                        <dd class="col-sm-8">@_connection.TestedAtUtc.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss")</dd>
+                    </dl>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-5">
+            <div class="card h-100">
+                <div class="card-header">
+                    <i class="bi bi-clock me-2"></i>Current Date &amp; Time
+                </div>
+                <div class="card-body text-center d-flex flex-column justify-content-center">
+                    <div class="display-4 fw-bold text-primary" id="clock">@_now.ToString("HH:mm:ss")</div>
+                    <div class="text-muted">@_now.ToString("dddd, MMMM d, yyyy")</div>
+                </div>
+                <div class="card-footer text-muted small">
+                    Server time updates automatically every second.
+                </div>
+            </div>
+        </div>
+    </div>
+
+    @if (!string.IsNullOrEmpty(_connection.ErrorMessage))
+    {
+        <div class="alert alert-danger mt-4">
+            <i class="bi bi-exclamation-triangle me-2"></i>@_connection.ErrorMessage
+        </div>
+    }
+}
+
+@code {
+    private ConnectionTestResult? _connection;
+    private bool _isLoading = true;
+    private DateTime _now = DateTime.Now;
+    private System.Threading.Timer? _timer;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await RefreshAsync();
+        _timer = new System.Threading.Timer(_ =>
+        {
+            _now = DateTime.Now;
+            InvokeAsync(StateHasChanged);
+        }, null, TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(1));
+    }
+
+    private async Task RefreshAsync()
+    {
+        _isLoading = true;
+        _connection = await DbService.TestConnectionAsync();
+        _isLoading = false;
+    }
+
+
+    public void Dispose() => _timer?.Dispose();
+}

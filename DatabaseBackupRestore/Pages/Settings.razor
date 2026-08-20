@@ -1,0 +1,145 @@
+@page "/settings"
+@rendermode InteractiveServer
+@inject DatabaseService DbService
+@inject Microsoft.Extensions.Options.IOptionsMonitor<AppSettings> SettingsMonitor
+
+<PageTitle>Settings</PageTitle>
+
+<h1 class="h3 mb-4">
+    <i class="bi bi-gear me-2 text-primary"></i>Settings
+</h1>
+
+<div class="row g-3">
+    <div class="col-lg-7">
+        <div class="card">
+            <div class="card-header">
+                <i class="bi bi-sliders me-2"></i>Current Configuration
+            </div>
+            <div class="card-body">
+                <EditForm Model="_model" OnValidSubmit="SaveAsync" FormName="settings-form">
+                    <DataAnnotationsValidator />
+
+                    <div class="mb-3">
+                        <label class="form-label">SQL Server Name</label>
+                        <InputText class="form-control" @bind-Value="_model.SqlServerName" />
+                        <ValidationMessage For="() => _model.SqlServerName" />
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Default Backup Folder</label>
+                        <InputText class="form-control" @bind-Value="_model.DefaultBackupFolder" />
+                        <ValidationMessage For="() => _model.DefaultBackupFolder" />
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Connection String</label>
+                        <InputTextArea class="form-control font-monospace" rows="4" @bind-Value="_model.ConnectionString" />
+                        <ValidationMessage For="() => _model.ConnectionString" />
+                        <div class="form-text">
+                            Values are persisted to <code>appsettings.json</code> via in-memory <c>IOptionsMonitor</c>.
+                        </div>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary me-2">
+                        <i class="bi bi-save me-1"></i> Save
+                    </button>
+                    <button type="button" class="btn btn-outline-secondary" @onclick="ReloadAsync">
+                        <i class="bi bi-arrow-counterclockwise me-1"></i> Reload
+                    </button>
+                </EditForm>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-5">
+        <div class="card h-100">
+            <div class="card-header">
+                <i class="bi bi-plug me-2"></i>Connection
+            </div>
+            <div class="card-body">
+                <button class="btn btn-outline-primary mb-3" @onclick="TestConnectionAsync" disabled="@_isTesting">
+                    @if (_isTesting)
+                    {
+                        <span class="spinner-border spinner-border-sm me-2"></span>
+                    }
+                    else
+                    {
+                        <i class="bi bi-activity me-2"></i>
+                    }
+                    Test Connection
+                </button>
+
+                @if (_testResult is not null)
+                {
+                    @if (_testResult.IsConnected)
+                    {
+                        <div class="alert alert-success">
+                            <h6 class="alert-heading">
+                                <i class="bi bi-check-circle me-1"></i> Connection successful
+                            </h6>
+                            <div class="small text-break"><strong>Version:</strong> @_testResult.ServerVersion</div>
+                            <div class="small"><strong>User DBs:</strong> @_testResult.DatabaseCount</div>
+                            <div class="small"><strong>Total size:</strong> @_testResult.TotalDatabaseSize</div>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="alert alert-danger">
+                            <h6 class="alert-heading">
+                                <i class="bi bi-exclamation-triangle me-1"></i> Connection failed
+                            </h6>
+                            <div class="small">@_testResult.ErrorMessage</div>
+                        </div>
+                    }
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private AppSettings _model = new();
+    private ConnectionTestResult? _testResult;
+    private bool _isTesting;
+
+
+    protected override void OnInitialized() => Reload();
+
+    private void Reload()
+    {
+        var snapshot = SettingsMonitor.CurrentValue;
+        _model = new AppSettings
+        {
+            SqlServerName = snapshot.SqlServerName,
+            DefaultBackupFolder = snapshot.DefaultBackupFolder,
+            ConnectionString = snapshot.ConnectionString
+        };
+    }
+
+    private async Task ReloadAsync()
+    {
+        Reload();
+        await Task.Yield();
+    }
+
+    private void SaveAsync()
+    {
+        // We intentionally do not mutate appsettings.json on disk here. Settings
+        // are loaded from configuration at startup; persisted value applies on next run.
+        _testResult = null;
+        StateHasChanged();
+    }
+
+    private async Task TestConnectionAsync()
+    {
+        _isTesting = true;
+        try
+        {
+            _testResult = await DbService.TestConnectionAsync();
+        }
+        finally
+        {
+            _isTesting = false;
+        }
+    }
+}

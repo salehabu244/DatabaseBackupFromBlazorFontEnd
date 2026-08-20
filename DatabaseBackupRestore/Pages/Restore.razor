@@ -1,0 +1,142 @@
+@page "/restore"
+@rendermode InteractiveServer
+@inject RestoreService RestoreService
+@inject IJSRuntime JS
+
+<PageTitle>Restore</PageTitle>
+
+<h1 class="h3 mb-4">
+    <i class="bi bi-cloud-arrow-up me-2 text-primary"></i>Restore Database
+</h1>
+
+<div class="row g-3">
+    <div class="col-lg-7">
+        <div class="card">
+            <div class="card-header">
+                <i class="bi bi-file-earmark-zip me-2"></i>Choose Backup File
+            </div>
+            <div class="card-body">
+                <EditForm Model="_model" OnValidSubmit="ConfirmAndRunRestoreAsync" FormName="restore-form">
+                    <DataAnnotationsValidator />
+
+                    <div class="mb-3">
+                        <label class="form-label">Backup File (.bak)</label>
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="bi bi-file-earmark-binary"></i></span>
+                            <InputText class="form-control" @bind-Value="_model.BackupFile" disabled="@_isBusy" placeholder="C:\SQLBackup\YourDatabase_20260716_120000.bak" />
+                            <button type="button" class="btn btn-outline-secondary" @onclick="BrowseAsync" disabled="@_isBusy">
+                                <i class="bi bi-folder2-open me-1"></i> Browse
+                            </button>
+                        </div>
+                        <ValidationMessage For="() => _model.BackupFile" />
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Destination Database Name</label>
+                        <InputText class="form-control" @bind-Value="_model.DestinationDatabaseName" disabled="@_isBusy" />
+                        <ValidationMessage For="() => _model.DestinationDatabaseName" />
+                    </div>
+
+                    <div class="form-check mb-3">
+                        <InputCheckbox class="form-check-input" id="overwrite" @bind-Value="_model.OverwriteExisting" disabled="@_isBusy" />
+                        <label class="form-check-label" for="overwrite">
+                            Overwrite existing database (sets it single-user before restoring)
+                        </label>
+                    </div>
+
+                    <button type="submit" class="btn btn-warning" disabled="@(!CanSubmit)">
+                        @if (_isBusy)
+                        {
+                            <span class="spinner-border spinner-border-sm me-2"></span>
+                        }
+                        else
+                        {
+                            <i class="bi bi-cloud-arrow-up me-2"></i>
+                        }
+                        Restore Database
+                    </button>
+                </EditForm>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-5">
+        <div class="card h-100">
+            <div class="card-header">
+                <i class="bi bi-info-square me-2"></i>Latest Result
+            </div>
+            <div class="card-body">
+                @if (_result is null)
+                {
+                    <p class="text-muted mb-0">No restore run yet.</p>
+                }
+                else if (_result.Success)
+                {
+                    <div class="alert alert-success mb-3">
+                        <h5 class="alert-heading">
+                            <i class="bi bi-check-circle me-1"></i> Restore completed
+                        </h5>
+                        <div><strong>Database:</strong> <code>@_result.DestinationDatabaseName</code></div>
+                        <div><strong>Duration:</strong> @FormatDuration(_result.Duration)</div>
+                    </div>
+                }
+                else
+                {
+                    <div class="alert alert-danger mb-3">
+                        <h5 class="alert-heading">
+                            <i class="bi bi-exclamation-triangle me-1"></i> Restore failed
+                        </h5>
+                        <div>@_result.ErrorMessage</div>
+                        <div class="small mt-2"><strong>Elapsed:</strong> @FormatDuration(_result.Duration)</div>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private RestoreRequest _model = new();
+    private RestoreResult? _result;
+    private bool _isBusy;
+
+    private bool CanSubmit => !_isBusy;
+
+    private async Task ConfirmAndRunRestoreAsync()
+    {
+        var ok = await JS.InvokeAsync<bool>(
+            "confirm",
+            $"Restore from \"{_model.BackupFile}\" as \"{_model.DestinationDatabaseName}\"?"
+            + (_model.OverwriteExisting
+                ? " This will OVERWRITE any existing database with the same name."
+                : " Abort if the target database already exists."));
+
+        if (!ok)
+        {
+            return;
+        }
+
+        _isBusy = true;
+        _result = null;
+        try
+        {
+            _result = await RestoreService.RestoreDatabaseAsync(_model);
+        }
+        finally
+        {
+            _isBusy = false;
+        }
+    }
+
+    private async Task BrowseAsync()
+    {
+        // Browsers cannot browse server-side paths directly; surface a warning and
+        // let the user paste the absolute path.
+        await JS.InvokeVoidAsync(
+            "alert",
+            "Browsers cannot open a server-side folder picker. Please paste the absolute path to the .bak file (e.g. C:\\SQLBackup\\YourDatabase.bak).");
+    }
+
+    private static string FormatDuration(TimeSpan ts) =>
+        ts.TotalSeconds < 60 ? $"{ts.TotalSeconds:0.##} s" : ts.ToString(@"mm\:ss");
+}

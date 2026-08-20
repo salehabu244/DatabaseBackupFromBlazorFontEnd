@@ -1,0 +1,179 @@
+/* Global styles for the Database Backup & Restore Blazor app. */
+
+html, body {
+    height: 100%;
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue",
+        Arial, "Noto Sans", sans-serif;
+    background-color: #f4f6fa;
+    color: #1f2937;
+}
+
+.page {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+}
+
+.top-bar {
+    background: linear-gradient(135deg, #0d6efd 0%, #6610f2 100%);
+    padding: 0.75rem 1rem;
+    position: sticky;
+    top: 0;
+    z-index: 1030;
+}
+
+.layout-body {
+    display: flex;
+    flex: 1 1 auto;
+    min-height: 0;
+}
+
+.side-nav {
+    width: 240px;
+    background-color: #1f2937;
+    color: #e5e7eb;
+    flex-shrink: 0;
+    transition: transform 0.25s ease;
+}
+
+.side-nav .nav-link {
+    color: #cbd5e1;
+    padding: 0.65rem 1rem;
+    border-left: 3px solid transparent;
+    transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+
+.side-nav .nav-link:hover {
+    background-color: rgba(255, 255, 255, 0.05);
+    color: #ffffff;
+}
+
+.side-nav .nav-link.active {
+    background-color: rgba(13, 110, 253, 0.2);
+    color: #ffffff;
+    border-left-color: #0d6efd;
+}
+
+.side-nav .nav-link i {
+    width: 20px;
+    display: inline-block;
+    text-align: center;
+}
+
+.content-area {
+    flex: 1 1 auto;
+    overflow-y: auto;
+}
+
+.app-footer {
+    background-color: #ffffff;
+    border-top: 1px solid #e5e7eb;
+}
+
+.nav-backdrop {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background-color: rgba(0, 0, 0, 0.5);
+    z-index: 1020;
+}
+
+.nav-backdrop.show {
+    display: block;
+}
+
+/* Cards */
+.card {
+    border: none;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.04);
+    border-radius: 0.5rem;
+}
+
+.card-header {
+    background-color: #ffffff;
+    border-bottom: 1px solid #e5e7eb;
+    font-weight: 600;
+}
+
+/* Stat tiles on the dashboard */
+.stat-tile {
+    border-radius: 0.5rem;
+    padding: 1.25rem;
+    color: #ffffff;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.stat-tile .stat-label {
+    font-size: 0.875rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    opacity: 0.85;
+}
+
+.stat-tile .stat-value {
+    font-size: 1.5rem;
+    font-weight: 700;
+}
+
+.stat-tile .stat-icon {
+    font-size: 2.5rem;
+    opacity: 0.7;
+}
+
+.bg-tile-primary { background: linear-gradient(135deg, #0d6efd, #6610f2); }
+.bg-tile-success { background: linear-gradient(135deg, #198754, #20c997); }
+.bg-tile-warning { background: linear-gradient(135deg, #fd7e14, #ffc107); }
+.bg-tile-info    { background: linear-gradient(135deg, #0dcaf0, #0d6efd); }
+
+/* Table tweaks */
+.table thead th {
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: #6c757d;
+    background-color: #f8f9fa;
+}
+
+/* Responsive layout */
+@media (max-width: 767.98px) {
+    .side-nav {
+        position: fixed;
+        top: 0;
+        bottom: 0;
+        left: 0;
+        transform: translateX(-100%);
+        z-index: 1025;
+        padding-top: 56px;
+    }
+
+    .side-nav.open {
+        transform: translateX(0);
+    }
+}
+
+@media (min-width: 768px) {
+    .nav-backdrop {
+        display: none !important;
+    }
+}
+
+/* Validation message spacing */
+.validation-message {
+    color: #dc3545;
+    font-size: 0.875rem;
+    margin-top: 0.25rem;
+}
+
+/* Code block in settings */
+.code-block {
+    background-color: #1f2937;
+    color: #e5e7eb;
+    padding: 0.75rem 1rem;
+    border-radius: 0.375rem;
+    font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+    font-size: 0.875rem;
+    word-break: break-all;
+}

@@ -1,0 +1,150 @@
+@page "/backup"
+@rendermode InteractiveServer
+@inject DatabaseService DbService
+@inject BackupService BackupService
+@inject BackupHistoryStore HistoryStore
+@inject Microsoft.Extensions.Options.IOptions<AppSettings> AppSettings
+
+<PageTitle>Backup</PageTitle>
+
+<h1 class="h3 mb-4">
+    <i class="bi bi-cloud-arrow-down me-2 text-primary"></i>Backup Database
+</h1>
+
+<div class="row g-3">
+    <div class="col-lg-7">
+        <div class="card">
+            <div class="card-header">
+                <i class="bi bi-database me-2"></i>Select Database &amp; Destination
+            </div>
+            <div class="card-body">
+                <EditForm Model="_model" OnValidSubmit="RunBackupAsync" FormName="backup-form">
+                    <DataAnnotationsValidator />
+
+                    <div class="mb-3">
+                        <label class="form-label">Database</label>
+                        <select class="form-select" @bind="_model.DatabaseName" disabled="@_isBusy">
+                            <option value="">-- Select a database --</option>
+                            @foreach (var db in _databases)
+                            {
+                                <option value="@db.Name">@db.Name (@db.DisplaySize)</option>
+                            }
+                        </select>
+                        <ValidationMessage For="() => _model.DatabaseName" />
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Backup Folder</label>
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="bi bi-folder"></i></span>
+                            <InputText class="form-control" @bind-Value="_model.BackupFolder" disabled="@_isBusy" />
+                        </div>
+                        <ValidationMessage For="() => _model.BackupFolder" />
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">File Name <span class="text-muted">(optional)</span></label>
+                        <InputText class="form-control" @bind-Value="_model.BackupFileName" disabled="@_isBusy" placeholder="@AutoFileName" />
+                        <div class="form-text">Leave empty to auto-generate: <code>@AutoFileName</code></div>
+                    </div>
+
+                    <div class="form-check mb-3">
+                        <InputCheckbox class="form-check-input" id="compress" @bind-Value="_model.Compression" disabled="@_isBusy" />
+                        <label class="form-check-label" for="compress">Use SQL Server backup compression</label>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary" disabled="@(!CanSubmit)">
+                        @if (_isBusy)
+                        {
+                            <span class="spinner-border spinner-border-sm me-2"></span>
+                        }
+                        else
+                        {
+                            <i class="bi bi-cloud-arrow-down me-2"></i>
+                        }
+                        Backup Database
+                    </button>
+                </EditForm>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-5">
+        <div class="card h-100">
+            <div class="card-header">
+                <i class="bi bi-info-square me-2"></i>Latest Result
+            </div>
+            <div class="card-body">
+                @if (_result is null)
+                {
+                    <p class="text-muted mb-0">No backup run yet.</p>
+                }
+                else if (_result.Success)
+                {
+                    <div class="alert alert-success mb-3">
+                        <h5 class="alert-heading">
+                            <i class="bi bi-check-circle me-1"></i> Backup completed
+                        </h5>
+                        <div><strong>File:</strong> <code>@_result.BackupFile</code></div>
+                        <div><strong>Duration:</strong> @FormatDuration(_result.Duration)</div>
+                    </div>
+                }
+                else
+                {
+                    <div class="alert alert-danger mb-3">
+                        <h5 class="alert-heading">
+                            <i class="bi bi-exclamation-triangle me-1"></i> Backup failed
+                        </h5>
+                        <div>@_result.ErrorMessage</div>
+                        <div class="small mt-2"><strong>Elapsed:</strong> @FormatDuration(_result.Duration)</div>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private BackupRequest _model = new();
+    private List<DatabaseInfo> _databases = new();
+    private BackupResult? _result;
+    private bool _isBusy;
+
+    private string AutoFileName =>
+        string.IsNullOrWhiteSpace(_model.DatabaseName)
+            ? "DatabaseName_yyyyMMdd_HHmmss.bak"
+            : BackupService.GenerateFileName(_model.DatabaseName);
+
+    private bool CanSubmit => !_isBusy;
+
+    /// <inheritdoc />
+    protected override async Task OnInitializedAsync()
+    {
+        _model.BackupFolder = AppSettings.Value.DefaultBackupFolder;
+        try
+        {
+            _databases = (await DbService.GetUserDatabasesAsync()).ToList();
+        }
+        catch
+        {
+            _databases = new();
+        }
+    }
+
+    private async Task RunBackupAsync()
+    {
+        _isBusy = true;
+        _result = null;
+        try
+        {
+            _result = await BackupService.BackupDatabaseAsync(_model);
+        }
+        finally
+        {
+            _isBusy = false;
+        }
+    }
+
+    private static string FormatDuration(TimeSpan ts) =>
+        ts.TotalSeconds < 60 ? $"{ts.TotalSeconds:0.##} s" : ts.ToString(@"mm\:ss");
+}
